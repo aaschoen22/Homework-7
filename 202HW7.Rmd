@@ -2,63 +2,125 @@
 title: "202HW7"
 author: "Schoen"
 date: "2023-03-25"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
+Link to github repository: https://github.com/aaschoen22/Homework-7.git
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-data(happy, package="productplots")
-head(happy)
+library(ggplot2)
+library(dplyr)
 ```
 
 ```{r}
+data(happy, package="productplots")
 HAPPY <- readRDS("~/202HW7/HAPPY.rds")
-HAPPY
+```
+
+```{r}
+HAPPY <- HAPPY %>% mutate(
+  happy = factor(tolower(HAPPY))
+) %>% select(-HAPPY)
+
+levels(HAPPY$happy)
 ```
 
 1) Replace missing values with NA
 
 ```{r}
-library(naniar)
-na_strings <- c("DK", "NA", "IAP")
-HAPPY %>% replace_with_na_all(condition= ~.x %in% na_strings)
+HAPPY <- replace(HAPPY, HAPPY =="IAP", NA)
+HAPPY <- replace(HAPPY, HAPPY =="DK", NA)
+HAPPY <- replace(HAPPY, HAPPY =="NA", NA)
 ```
 
 2) Convert categorical variables into factor variables
 
 ```{r}
-Happy2 <- HAPPY
-Happy2 <- as.data.frame(unclass(Happy2), stringsAsFactors=TRUE)
-str(Happy2)
+HAPPY <- HAPPY
+HAPPY <- as.data.frame(unclass(HAPPY), stringsAsFactors=TRUE)
+str(HAPPY)
 ```
 
 Change 89 or older to 89 and make the variable numeric
 ```{r}
-library(dplyr)
-Happy2$AGE <- as.numeric(as.character(Happy2$AGE))
-Happy2$AGE[Happy2$AGE == "89 OR OLDER"] <- 89
-str(Happy2)
+HAPPY <- HAPPY %>% mutate(
+  age = replace(AGE, AGE == "89 AND OLDER", 89),
+  age = as.numeric(age)
+) %>% select(-AGE)
+
+HAPPY %>% ggplot(aes(x=age)) + geom_histogram(binwidths=1)
 ```
 
+The variable DEGREE
+```{r}
+HAPPY <- HAPPY %>% mutate(
+  degree= factor(tolower(DEGREE)),
+  degree = factor(degree, levels=c("lt high school", "high school", "junior college", "bachelor", "graduate"))
+) %>% select(-DEGREE)
+
+HAPPY %>% ggplot(aes(x=degree)) + geom_bar()
+```
 
 3) Bring all levels of factor into a sensible order
+
 ```{r}
-Happy2$HAPPY.reorder = Happy2$HAPPY
-levels(Happy2$HAPPY.reorder)= c("NOT TOO HAPPY", "PRETTY HAPPY", "VERY HAPPY")
+HAPPY$happy = factor(HAPPY$happy, levels=c("NOT TOO HAPPY", "PRETTY HAPPY", "VERY HAPPY"))
 
-levels(reorder(Happy2$MARITAL, Happy2$AGE, FUN= mean, na.rm =TRUE))
+HAPPY$MARITAL = factor(HAPPY$MARITAL, levels = levels(reorder(HAPPY$MARITAL, HAPPY$age, mean, na.rm=TRUE)))
 
-Happy2$DEGREE.reorder = Happy2$DEGREE
-levels(Happy2$DEGREE.reorder)= c("NA","LT HIGH SCHOOL", "HIGH SCHOOL", "JUNIOR COLLEGE", "BACHELOR", "GRADUATE")
+HAPPY$degree= factor(HAPPY$degree, levels= c("NA","LT HIGH SCHOOL", "HIGH SCHOOL", "JUNIOR COLLEGE", "BACHELOR", "GRADUATE"))
 
-levels(reorder(Happy2$FINRELA, Happy2$AGE, FUN= mean, na.rm=TRUE))
+HAPPY$FINRELA= factor(HAPPY$FINRELA, levels= c("FAR BELOW AVERAGE", "BELOW AVERAGE", "AVERAGE", "ABOVE AVERAGE", "FAR ABOVE AVERAGE"))
 
+HAPPY$HEALTH = factor(HAPPY$HEALTH, levels= c("POOR", "FAIR", "GOOD", "EXCELLENT"))
+
+HAPPY$PARTYID= factor(HAPPY$PARTYID, levels= c("STRONG DEMOCRAT", "NOT STR DEMOCRAT", "STRONG REPUBLICAN", "NOT STR REPUBLICAN", "IND, NEAR DEM", "IND, NEAR REP"))
+
+HAPPY$POLVIEWS = factor(HAPPY$POLVIEWS, levels = levels(reorder(HAPPY$POLVIEWS, HAPPY$age, FUN= mean, na.rm=TRUE)))
+
+str(HAPPY)
+saveRDS(HAPPY, file="HAPPY2")
 ```
 
 
+Summarizing Happiness
+```{r}
+happy %>% summarise(
+  m.happy = mean(as.numeric(happy), na.rm=TRUE)
+)
 
+happy %>% group_by(sex) %>% summarise(
+  m.happy = mean(as.numeric(happy), na.rm=TRUE)
+)
+```
 
+Individually Exploring Further Questions:
 
+How does happiness vary by degree level obtained? 
+```{r}
+happy.degree= happy %>% group_by(degree) %>% summarise(m.happy.degree = mean(as.numeric(happy), na.rm = TRUE)) %>% arrange(m.happy.degree)
+
+happy.degree %>% ggplot(aes(x = degree, y=m.happy.degree)) +geom_point()
+```
+
+Conclusions: Happiness appears to steadily increase as the degree level obtained increases. There is a clear linear relationship displayed on the plot to indicate the positive relationship between the two variables. The NA category falls between the two lowest degrees obtained which is the only deviation from the pattern. 
+
+How does happiness vary based on marital status?
+```{r}
+ggplot(happy, aes(x=sex))+ geom_bar() + facet_wrap(happy$happy) +coord_flip()
+```
+
+Conclusions: There are a greater number of female responses overall in the data set. We can see this since for every category of happiness females have a higher count than men. There does not appear to be a significant difference in happiness at any level on the basis of sex. The majority of responses for both sexes were in the "pretty happy" category. 
+
+How does happiness differ based on health level and sex? 
+```{r}
+happy.health.sex = happy %>% group_by(health, sex) %>% summarise(m.happy = mean(as.numeric(happy), na.rm = TRUE)) %>% arrange(m.happy)
+happy.health.sex %>% ggplot(aes(x = health, fill = sex)) + geom_bar(aes(weight = m.happy), position = position_dodge()) + labs(title = "Happiness on health and sex", y = "Happiness")
+```
+
+Conclusions: There does not appear to be a significant difference in happiness at all levels of health based on sex. As we can see in the plot, the mean happiness values at the top of each bar is very close to the corresponding bar for the other sex. None of the differences appear to be more than 0.1 based on what we can see from the bar chart. The levels of health also all appear to increase with the mean happiness rating. Poor health has the lowest happiness and steadily increases till excellent health hits the peak value. 
