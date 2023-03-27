@@ -1,0 +1,64 @@
+---
+title: "202HW7"
+author: "Schoen"
+date: "2023-03-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+data(happy, package="productplots")
+head(happy)
+```
+
+```{r}
+HAPPY <- readRDS("~/202HW7/HAPPY.rds")
+HAPPY
+```
+
+1) Replace missing values with NA
+
+```{r}
+library(naniar)
+na_strings <- c("DK", "NA", "IAP")
+HAPPY %>% replace_with_na_all(condition= ~.x %in% na_strings)
+```
+
+2) Convert categorical variables into factor variables
+
+```{r}
+Happy2 <- HAPPY
+Happy2 <- as.data.frame(unclass(Happy2), stringsAsFactors=TRUE)
+str(Happy2)
+```
+
+Change 89 or older to 89 and make the variable numeric
+```{r}
+library(dplyr)
+Happy2$AGE <- as.numeric(as.character(Happy2$AGE))
+Happy2$AGE[Happy2$AGE == "89 OR OLDER"] <- 89
+str(Happy2)
+```
+
+
+3) Bring all levels of factor into a sensible order
+```{r}
+Happy2$HAPPY.reorder = Happy2$HAPPY
+levels(Happy2$HAPPY.reorder)= c("NOT TOO HAPPY", "PRETTY HAPPY", "VERY HAPPY")
+
+levels(reorder(Happy2$MARITAL, Happy2$AGE, FUN= mean, na.rm =TRUE))
+
+Happy2$DEGREE.reorder = Happy2$DEGREE
+levels(Happy2$DEGREE.reorder)= c("NA","LT HIGH SCHOOL", "HIGH SCHOOL", "JUNIOR COLLEGE", "BACHELOR", "GRADUATE")
+
+levels(reorder(Happy2$FINRELA, Happy2$AGE, FUN= mean, na.rm=TRUE))
+
+```
+
+
+
+
+
